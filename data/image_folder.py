@@ -13,15 +13,27 @@ import os.path
 import collections
 
 IMG_EXTENSIONS = [
-    '.jpg', '.JPG', '.jpeg', '.JPEG',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
+    ".jpg",
+    ".JPG",
+    ".jpeg",
+    ".JPEG",
+    ".png",
+    ".PNG",
+    ".ppm",
+    ".PPM",
+    ".bmp",
+    ".BMP",
+    ".pt",
+    ".npy",
 ]
+
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
+
 def make_dataset_with_labels(dir, classnames):
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    assert os.path.isdir(dir), "%s is not a valid directory" % dir
 
     images = []
     labels = []
@@ -40,9 +52,10 @@ def make_dataset_with_labels(dir, classnames):
                 labels.append(label)
 
     return images, labels
- 
+
+
 def make_dataset_classwise(dir, category):
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    assert os.path.isdir(dir), "%s is not a valid directory" % dir
 
     images = []
     for root, _, fnames in sorted(os.walk(dir, followlinks=True)):
@@ -56,9 +69,10 @@ def make_dataset_classwise(dir, category):
 
     return images
 
+
 def make_dataset(dir):
     images = []
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    assert os.path.isdir(dir), "%s is not a valid directory" % dir
 
     for root, _, fnames in sorted(os.walk(dir, followlinks=True)):
         for fname in fnames:

@@ -1,16 +1,35 @@
 import torch
 from torch.nn import functional as F
-from utils.utils import to_cuda, to_onehot
+
+# from utils.utils import to_cuda, to_onehot
 from scipy.optimize import linear_sum_assignment
 from math import ceil
 
+
+def to_cuda(x):
+    if torch.cuda.is_available():
+        x = x.cuda()
+    return x
+
+
+def to_data(x):
+    if torch.cuda.is_available():
+        x = x.cpu()
+    return x.data.numpy()
+
+
+def to_onehot(label, num_classes):
+    identity = to_cuda(torch.eye(num_classes))
+    onehot = torch.index_select(identity, 0, label)
+    return onehot
+
+
 class DIST(object):
-    def __init__(self, dist_type='cos'):
-        self.dist_type = dist_type 
+    def __init__(self, dist_type="cos"):
+        self.dist_type = dist_type
 
     def get_dist(self, pointA, pointB, cross=False):
-        return getattr(self, self.dist_type)(
-		pointA, pointB, cross)
+        return getattr(self, self.dist_type)(pointA, pointB, cross)
 
     def cos(self, pointA, pointB, cross):
         pointA = F.normalize(pointA, dim=1)
@@ -20,11 +39,12 @@ class DIST(object):
         else:
             NA = pointA.size(0)
             NB = pointB.size(0)
-            assert(pointA.size(1) == pointB.size(1))
+            assert pointA.size(1) == pointB.size(1)
             return 0.5 * (1.0 - torch.matmul(pointA, pointB.transpose(0, 1)))
 
+
 class Clustering(object):
-    def __init__(self, eps, feat_key, max_len=1000, dist_type='cos'):
+    def __init__(self, eps, feat_key, max_len=1000, dist_type="cos"):
         self.eps = eps
         self.Dist = DIST(dist_type)
         self.samples = {}
@@ -43,9 +63,9 @@ class Clustering(object):
         if centers is None:
             self.stop = False
         else:
-            dist = self.Dist.get_dist(centers, self.centers) 
+            dist = self.Dist.get_dist(centers, self.centers)
             dist = torch.mean(dist, dim=0)
-            print('dist %.4f' % dist.item())
+            print("dist %.4f" % dist.item())
             self.stop = dist.item() < self.eps
 
     def assign_labels(self, feats):
@@ -61,27 +81,26 @@ class Clustering(object):
 
     def collect_samples(self, net, loader):
         data_feat, data_gt, data_paths = [], [], []
-        for sample in iter(loader): 
-            data = sample['Img'].cuda()
-            data_paths += sample['Path']
-            if 'Label' in sample.keys():
-                data_gt += [to_cuda(sample['Label'])]
+        for sample in iter(loader):
+            data = sample["Img"].cuda()
+            data_paths += sample["Path"]
+            if "Label" in sample.keys():
+                data_gt += [to_cuda(sample["Label"])]
 
             output = net.forward(data)
-            feature = output[self.feat_key].data 
+            feature = output[self.feat_key].data
             data_feat += [feature]
-            
-        self.samples['data'] = data_paths
-        self.samples['gt'] = torch.cat(data_gt, dim=0) \
-                    if len(data_gt)>0 else None
-        self.samples['feature'] = torch.cat(data_feat, dim=0)
+
+        self.samples["data"] = data_paths
+        self.samples["gt"] = torch.cat(data_gt, dim=0) if len(data_gt) > 0 else None
+        self.samples["feature"] = torch.cat(data_feat, dim=0)
 
     def feature_clustering(self, net, loader):
-        centers = None 
-        self.stop = False 
+        centers = None
+        self.stop = False
 
         self.collect_samples(net, loader)
-        feature = self.samples['feature']
+        feature = self.samples["feature"]
 
         refs = to_cuda(torch.LongTensor(range(self.num_classes)).unsqueeze(1))
         num_samples = feature.size(0)
@@ -91,12 +110,13 @@ class Clustering(object):
             self.clustering_stop(centers)
             if centers is not None:
                 self.centers = centers
-            if self.stop: break
+            if self.stop:
+                break
 
             centers = 0
             count = 0
 
-            start = 0 
+            start = 0
             for N in range(num_split):
                 cur_len = min(self.max_len, num_samples - start)
                 cur_feature = feature.narrow(0, start, cur_len)
@@ -105,14 +125,14 @@ class Clustering(object):
                 count += torch.sum(labels_onehot, dim=0)
                 labels = labels.unsqueeze(0)
                 mask = (labels == refs).unsqueeze(2).type(torch.cuda.FloatTensor)
-                reshaped_feature = cur_feature.unsqueeze(0)    
+                reshaped_feature = cur_feature.unsqueeze(0)
                 # update centers
                 centers += torch.sum(reshaped_feature * mask, dim=1)
                 start += cur_len
-    
-            mask = (count.unsqueeze(1) > 0).type(torch.cuda.FloatTensor) 
+
+            mask = (count.unsqueeze(1) > 0).type(torch.cuda.FloatTensor)
             centers = mask * centers + (1 - mask) * self.init_centers
-            
+
         dist2center, labels = [], []
         start = 0
         count = 0
@@ -128,22 +148,22 @@ class Clustering(object):
             labels += [cur_labels]
             start += cur_len
 
-        self.samples['label'] = torch.cat(labels, dim=0)
-        self.samples['dist2center'] = torch.cat(dist2center, dim=0)
+        self.samples["label"] = torch.cat(labels, dim=0)
+        self.samples["dist2center"] = torch.cat(dist2center, dim=0)
 
         cluster2label = self.align_centers()
         # reorder the centers
         self.centers = self.centers[cluster2label, :]
         # re-label the data according to the index
-        num_samples = len(self.samples['feature'])
+        num_samples = len(self.samples["feature"])
         for k in range(num_samples):
-            self.samples['label'][k] = cluster2label[self.samples['label'][k]].item()
+            self.samples["label"][k] = cluster2label[self.samples["label"][k]].item()
 
-        self.center_change = torch.mean(self.Dist.get_dist(self.centers, \
-                    self.init_centers))
+        self.center_change = torch.mean(
+            self.Dist.get_dist(self.centers, self.init_centers)
+        )
 
         for i in range(num_samples):
-            self.path2label[self.samples['data'][i]] = self.samples['label'][i].item()
+            self.path2label[self.samples["data"][i]] = self.samples["label"][i].item()
 
-        del self.samples['feature']
-
+        del self.samples["feature"]
