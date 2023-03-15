@@ -2,7 +2,8 @@
 import torch.nn as nn
 from torch.nn import BatchNorm2d
 
-from torchvision.models import utils as vutils
+# from torchvision.models import utils as vutils
+from torch.hub import load_state_dict_from_url
 from .domain_specific_module import BatchNormDomain
 from . import utils as model_utils
 
@@ -301,15 +302,13 @@ def _resnet(arch, block, layers, num_domains, pretrained, progress, **kwargs):
     model = ResNet(block, layers, num_domains=num_domains, **kwargs)
     BN2BNDomain = True
     if pretrained:
-        state_dict = vutils.load_state_dict_from_url(
-            model_urls[arch], progress=progress
-        )
+        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         BN2BNDomain = True
     else:
         state_dict = None
         BN2BNDomain = False
-
-    model_utils.init_weights(model, state_dict, num_domains, BN2BNDomain)
+    print("Warning : No weights initialization")
+    # model_utils.init_weights(model, state_dict, num_domains, BN2BNDomain)
     return model
 
 

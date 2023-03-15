@@ -82,7 +82,7 @@ class Clustering(object):
     def collect_samples(self, net, loader):
         data_feat, data_gt, data_paths = [], [], []
         for sample in iter(loader):
-            data = sample["Img"].cuda()
+            data = sample["Img"]  # .cuda()
             data_paths += sample["Path"]
             if "Label" in sample.keys():
                 data_gt += [to_cuda(sample["Label"])]
@@ -124,13 +124,13 @@ class Clustering(object):
                 labels_onehot = to_onehot(labels, self.num_classes)
                 count += torch.sum(labels_onehot, dim=0)
                 labels = labels.unsqueeze(0)
-                mask = (labels == refs).unsqueeze(2).type(torch.cuda.FloatTensor)
+                mask = (labels == refs).unsqueeze(2).type(torch.FloatTensor)
                 reshaped_feature = cur_feature.unsqueeze(0)
                 # update centers
                 centers += torch.sum(reshaped_feature * mask, dim=1)
                 start += cur_len
 
-            mask = (count.unsqueeze(1) > 0).type(torch.cuda.FloatTensor)
+            mask = (count.unsqueeze(1) > 0).type(torch.FloatTensor)
             centers = mask * centers + (1 - mask) * self.init_centers
 
         dist2center, labels = [], []

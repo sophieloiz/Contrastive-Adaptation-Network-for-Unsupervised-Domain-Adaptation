@@ -184,6 +184,9 @@ class CANSolver(BaseSolver):
         init_target_centers = source_centers
 
         target_dataloader = self.train_data[self.clustering_target_name]["loader"]
+
+        # print(target_dataloader)
+
         net.module.set_bn_domain(self.bn_domain_map[self.target_name])
 
         self.clustering.set_init_centers(init_target_centers)

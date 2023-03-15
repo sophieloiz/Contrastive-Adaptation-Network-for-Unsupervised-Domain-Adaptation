@@ -18,7 +18,7 @@ class BaseDataset(Dataset):
         # img = Image.open(path).convert("RGB")
         print(path)
         img = torch.from_numpy(
-            np.load(path)[0, 50, :, :]
+            np.load(path)[0, 150, :, :]
         )  # , map_location=torch.device("cpu"))
 
         if self.transform is not None:
@@ -64,9 +64,13 @@ class BaseDatasetWithoutLabel(Dataset):
     def __getitem__(self, index):
         path = self.data_paths[index]
         # img = Image.open(path).convert("RGB")
-        img = torch.load(path)
+        img = torch.from_numpy(
+            np.load(path)[0, 150, :, :]
+        )  # , map_location=torch.device("cpu"))
+
         if self.transform is not None:
             img = self.transform(img)
+            print(img)
 
         return {"Path": path, "Img": img}
 

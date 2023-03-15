@@ -107,6 +107,8 @@ def set_param_groups(net, lr_mult_dict):
 def get_centers(net, dataloader, num_classes, key="feat"):
     centers = 0
     refs = to_cuda(torch.LongTensor(range(num_classes)).unsqueeze(1))
+    refs = torch.LongTensor(range(num_classes)).unsqueeze(1)
+
     for sample in iter(dataloader):
         data = to_cuda(sample["Img"])
         gt = to_cuda(sample["Label"])
@@ -117,9 +119,11 @@ def get_centers(net, dataloader, num_classes, key="feat"):
         feat_len = feature.size(1)
 
         gt = gt.unsqueeze(0).expand(num_classes, -1)
-        mask = (gt == refs).unsqueeze(2).type(torch.cuda.FloatTensor)
+        mask = (gt == refs).unsqueeze(2)  # .type(torch.cuda.FloatTensor)
         feature = feature.unsqueeze(0)
         # update centers
         centers += torch.sum(feature * mask, dim=1)
+
+    print(centers)
 
     return centers

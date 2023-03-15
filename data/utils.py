@@ -35,11 +35,11 @@ def get_transform(train=True):
 
     to_normalized_tensor = [
         transforms.ToTensor(),
-        transforms.Normalize(
-            [1],
-            [0]
-            # mean=cfg.DATA_TRANSFORM.NORMALIZE_MEAN, std=cfg.DATA_TRANSFORM.NORMALIZE_STD
-        ),
+        # transforms.Normalize(
+        #   [1],
+        #  [0]
+        # mean=cfg.DATA_TRANSFORM.NORMALIZE_MEAN, std=cfg.DATA_TRANSFORM.NORMALIZE_STD
+        # ),
     ]
 
     if not train and cfg.DATA_TRANSFORM.WITH_FIVE_CROP:
